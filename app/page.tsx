@@ -14,6 +14,60 @@ type Video = {
 
 const suggestions = ["funny moments", "karen", "incredible moments"];
 
+const sourceConnections = [
+  { name: "Dailymotion", state: "Đang hoạt động", tone: "live" },
+  { name: "PeerTube", state: "Đang hoạt động", tone: "live" },
+  { name: "Internet Archive", state: "Đang hoạt động", tone: "live" },
+  { name: "YouTube", state: "Cần API key", tone: "key" },
+  { name: "Reddit", state: "Cần ứng dụng Reddit", tone: "key" },
+  { name: "X", state: "Cần Bearer Token", tone: "key" },
+  { name: "Web & báo chí", state: "Cần Google Search API", tone: "key" },
+  { name: "Facebook / Instagram / Threads", state: "Chỉ nội dung được cấp quyền", tone: "limited" },
+];
+
+const externalSources = [
+  {
+    name: "Reddit",
+    href: (query: string) =>
+      `https://www.reddit.com/search/?q=${encodeURIComponent(query)}&type=media`,
+  },
+  {
+    name: "X",
+    href: (query: string) =>
+      `https://x.com/search?q=${encodeURIComponent(`${query} filter:videos`)}&src=typed_query`,
+  },
+  {
+    name: "Facebook",
+    href: (query: string) =>
+      `https://www.facebook.com/search/videos?q=${encodeURIComponent(query)}`,
+  },
+  {
+    name: "Instagram",
+    href: (query: string) =>
+      `https://www.instagram.com/explore/search/keyword/?q=${encodeURIComponent(query)}`,
+  },
+  {
+    name: "Threads",
+    href: (query: string) =>
+      `https://www.threads.com/search?q=${encodeURIComponent(query)}`,
+  },
+  {
+    name: "Rumble",
+    href: (query: string) =>
+      `https://rumble.com/search/video?q=${encodeURIComponent(query)}`,
+  },
+  {
+    name: "Google News",
+    href: (query: string) =>
+      `https://news.google.com/search?q=${encodeURIComponent(query)}`,
+  },
+  {
+    name: "Bing Video",
+    href: (query: string) =>
+      `https://www.bing.com/videos/search?q=${encodeURIComponent(query)}`,
+  },
+];
+
 function formatDuration(seconds?: number) {
   if (!seconds) return "";
   const minutes = Math.floor(seconds / 60);
@@ -93,6 +147,9 @@ export default function Home() {
             <option value="youtube">YouTube</option>
             <option value="peertube">PeerTube</option>
             <option value="archive">Internet Archive</option>
+            <option value="reddit">Reddit</option>
+            <option value="x">X</option>
+            <option value="web">Web & báo chí</option>
           </select>
           <button disabled={loading}>{loading ? "Đang quét..." : "Tìm video"}</button>
         </form>
@@ -103,6 +160,24 @@ export default function Home() {
             <button key={item} onClick={() => search(undefined, item)}>{item}</button>
           ))}
         </div>
+
+        <details className="connections">
+          <summary>Trạng thái nguồn & yêu cầu kết nối</summary>
+          <div className="connection-grid">
+            {sourceConnections.map((item) => (
+              <div className="connection-item" key={item.name}>
+                <strong>{item.name}</strong>
+                <span className={item.tone}>{item.state}</span>
+              </div>
+            ))}
+          </div>
+          <p>
+            Đăng nhập tài khoản cá nhân không tự động cấp quyền tìm kiếm toàn nền
+            tảng. Reddit, X, YouTube và tìm kiếm báo chí cần ứng dụng nhà phát
+            triển/API key. Facebook, Instagram và Threads chỉ cho phép lấy phạm
+            vi nội dung mà Meta đã cấp quyền cho ứng dụng.
+          </p>
+        </details>
       </section>
 
       <section className="results" aria-live="polite">
@@ -142,6 +217,27 @@ export default function Home() {
               </article>
             ))}
         </div>
+
+        {query && (
+          <div className="external-search">
+            <div>
+              <p>TÌM THÊM TRÊN NỀN TẢNG GỐC</p>
+              <h2>Các nguồn có thể yêu cầu bạn đăng nhập</h2>
+            </div>
+            <div className="external-links">
+              {externalSources.map((item) => (
+                <a
+                  key={item.name}
+                  href={item.href(query)}
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  {item.name} ↗
+                </a>
+              ))}
+            </div>
+          </div>
+        )}
 
         {!loading && videos.length === 0 && !message && (
           <div className="empty">
