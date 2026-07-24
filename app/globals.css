@@ -70,6 +70,22 @@ footer { border-top: 1px solid var(--line); padding: 28px max(28px, calc((100% -
 footer span { color: var(--ink); font-weight: 700; }
 footer p { margin: 0; text-align: right; }
 
+.connections { max-width: 880px; margin: 28px auto 0; padding: 16px 18px; border: 1px solid var(--line); background: #fff8; text-align: left; }
+.connections summary { cursor: pointer; color: var(--ink); font-weight: 700; }
+.connection-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin-top: 16px; }
+.connection-item { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 11px 12px; border: 1px solid var(--line); background: var(--card); }
+.connection-item span { font-size: 11px; }
+.connection-item .live { color: #278457; }
+.connection-item .key { color: #a86600; }
+.connection-item .limited { color: #b83d36; }
+.connections > p { margin: 14px 2px 0; color: var(--muted); font-size: 12px; line-height: 1.55; }
+.external-search { display: flex; justify-content: space-between; gap: 24px; margin-top: 34px; padding: 22px; border: 1px solid var(--line); background: #fff8; }
+.external-search p { margin: 0 0 5px; color: var(--accent); font-size: 10px; font-weight: 800; letter-spacing: 1.3px; }
+.external-search h2 { margin: 0; font-family: "Instrument Serif", serif; font-size: 25px; font-weight: 400; }
+.external-links { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; max-width: 560px; }
+.external-links a { padding: 8px 11px; border: 1px solid var(--line); border-radius: 99px; color: var(--ink); font-size: 12px; text-decoration: none; }
+.external-links a:hover { border-color: var(--accent); color: var(--accent); }
+
 @media (max-width: 800px) {
   .hero { padding-top: 65px; }
   h1 { font-size: 65px; letter-spacing: -2.5px; }
@@ -77,6 +93,8 @@ footer p { margin: 0; text-align: right; }
   .search-box { flex-wrap: wrap; }
   .search-box input { height: 44px; }
   .search-box select { border-left: 0; flex: 1; }
+  .external-search { flex-direction: column; }
+  .external-links { justify-content: flex-start; }
 }
 
 @media (max-width: 560px) {
@@ -91,6 +109,7 @@ footer p { margin: 0; text-align: right; }
   .grid { grid-template-columns: 1fr; }
   .results { padding: 38px 18px 60px; }
   .results-head { align-items: start; flex-direction: column; }
+  .connection-grid { grid-template-columns: 1fr; }
   footer { flex-direction: column; }
   footer p { text-align: left; line-height: 1.5; }
 }
