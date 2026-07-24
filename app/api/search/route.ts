@@ -10,7 +10,14 @@ type Video = {
   duration?: number;
 };
 
-type SourceKey = "dailymotion" | "youtube" | "peertube" | "archive";
+type SourceKey =
+  | "dailymotion"
+  | "youtube"
+  | "peertube"
+  | "archive"
+  | "reddit"
+  | "x"
+  | "web";
 
 async function searchDailymotion(query: string): Promise<Video[]> {
   const fields =
@@ -136,6 +143,152 @@ async function searchInternetArchive(query: string): Promise<Video[]> {
   });
 }
 
+async function searchReddit(query: string): Promise<Video[]> {
+  const clientId = process.env.REDDIT_CLIENT_ID;
+  const clientSecret = process.env.REDDIT_CLIENT_SECRET;
+  if (!clientId || !clientSecret) return [];
+
+  const credentials = Buffer.from(`${clientId}:${clientSecret}`).toString(
+    "base64",
+  );
+  const tokenResponse = await fetch(
+    "https://www.reddit.com/api/v1/access_token",
+    {
+      method: "POST",
+      headers: {
+        Authorization: `Basic ${credentials}`,
+        "Content-Type": "application/x-www-form-urlencoded",
+        "User-Agent": "ClipHunt/1.0 by sonmt-cyber",
+      },
+      body: "grant_type=client_credentials",
+      cache: "no-store",
+    },
+  );
+  if (!tokenResponse.ok) throw new Error("Reddit chưa phản hồi");
+  const tokenData = await tokenResponse.json();
+
+  const endpoint = new URL("https://oauth.reddit.com/search");
+  endpoint.searchParams.set("q", query);
+  endpoint.searchParams.set("type", "link");
+  endpoint.searchParams.set("sort", "relevance");
+  endpoint.searchParams.set("limit", "18");
+  endpoint.searchParams.set("raw_json", "1");
+
+  const response = await fetch(endpoint, {
+    headers: {
+      Authorization: `Bearer ${tokenData.access_token}`,
+      "User-Agent": "ClipHunt/1.0 by sonmt-cyber",
+    },
+    next: { revalidate: 180 },
+  });
+  if (!response.ok) throw new Error("Reddit chưa phản hồi");
+  const data = await response.json();
+
+  return (data.data?.children || [])
+    .map((child: Record<string, any>) => child.data)
+    .map((item: Record<string, any>) => {
+      const preview = item.preview?.images?.[0]?.source?.url?.replace(
+        /&amp;/g,
+        "&",
+      );
+      const thumbnail =
+        preview || (String(item.thumbnail).startsWith("http") ? item.thumbnail : "");
+      return {
+        id: String(item.id),
+        title: String(item.title),
+        url: `https://www.reddit.com${item.permalink}`,
+        thumbnail,
+        source: "Reddit",
+        channel: String(item.subreddit_name_prefixed || item.author || "Reddit"),
+        duration: Number(item.media?.reddit_video?.duration || 0),
+      };
+    })
+    .filter((item: Video) => item.thumbnail);
+}
+
+async function searchX(query: string): Promise<Video[]> {
+  const token = process.env.X_BEARER_TOKEN;
+  if (!token) return [];
+
+  const endpoint = new URL("https://api.x.com/2/tweets/search/recent");
+  endpoint.searchParams.set("query", `${query} has:videos -is:retweet`);
+  endpoint.searchParams.set("max_results", "18");
+  endpoint.searchParams.set("expansions", "attachments.media_keys,author_id");
+  endpoint.searchParams.set("media.fields", "preview_image_url,type,url");
+  endpoint.searchParams.set("user.fields", "name,username");
+
+  const response = await fetch(endpoint, {
+    headers: { Authorization: `Bearer ${token}` },
+    next: { revalidate: 180 },
+  });
+  if (!response.ok) throw new Error("X chưa phản hồi");
+  const data = await response.json();
+  const media = new Map(
+    (data.includes?.media || []).map((item: Record<string, any>) => [
+      item.media_key,
+      item,
+    ]),
+  );
+  const users = new Map(
+    (data.includes?.users || []).map((item: Record<string, any>) => [
+      item.id,
+      item,
+    ]),
+  );
+
+  return (data.data || [])
+    .map((item: Record<string, any>) => {
+      const mediaItem = (item.attachments?.media_keys || [])
+        .map((key: string) => media.get(key))
+        .find((entry: Record<string, any>) => entry?.type === "video");
+      const user = users.get(item.author_id) as Record<string, any> | undefined;
+      return {
+        id: String(item.id),
+        title: String(item.text || "Video trên X"),
+        url: `https://x.com/i/web/status/${item.id}`,
+        thumbnail: String(mediaItem?.preview_image_url || ""),
+        source: "X",
+        channel: user ? `@${user.username}` : "X",
+      };
+    })
+    .filter((item: Video) => item.thumbnail);
+}
+
+async function searchWeb(query: string): Promise<Video[]> {
+  const key = process.env.GOOGLE_SEARCH_API_KEY;
+  const cx = process.env.GOOGLE_SEARCH_ENGINE_ID;
+  if (!key || !cx) return [];
+
+  const endpoint = new URL("https://www.googleapis.com/customsearch/v1");
+  endpoint.searchParams.set("key", key);
+  endpoint.searchParams.set("cx", cx);
+  endpoint.searchParams.set("q", `${query} video OR watch`);
+  endpoint.searchParams.set("num", "10");
+  endpoint.searchParams.set("safe", "active");
+
+  const response = await fetch(endpoint, { next: { revalidate: 300 } });
+  if (!response.ok) throw new Error("Tìm kiếm Web chưa phản hồi");
+  const data = await response.json();
+  return (data.items || [])
+    .map((item: Record<string, any>, index: number) => {
+      const thumbnail =
+        item.pagemap?.cse_thumbnail?.[0]?.src ||
+        item.pagemap?.imageobject?.[0]?.thumbnailurl ||
+        item.pagemap?.metatags?.[0]?.["og:image"] ||
+        "";
+      const host = new URL(item.link).hostname.replace(/^www\./, "");
+      return {
+        id: `${index}-${item.cacheId || item.link}`,
+        title: String(item.title),
+        url: String(item.link),
+        thumbnail: String(thumbnail),
+        source: "Web & News",
+        channel: host,
+      };
+    })
+    .filter((item: Video) => item.thumbnail);
+}
+
 export async function GET(request: NextRequest) {
   const query = request.nextUrl.searchParams.get("q")?.trim();
   const source = request.nextUrl.searchParams.get("source") || "all";
@@ -176,6 +329,29 @@ export async function GET(request: NextRequest) {
       enabled: true,
       search: searchInternetArchive,
     },
+    {
+      key: "reddit",
+      label: "Reddit",
+      enabled: Boolean(
+        process.env.REDDIT_CLIENT_ID && process.env.REDDIT_CLIENT_SECRET,
+      ),
+      search: searchReddit,
+    },
+    {
+      key: "x",
+      label: "X",
+      enabled: Boolean(process.env.X_BEARER_TOKEN),
+      search: searchX,
+    },
+    {
+      key: "web",
+      label: "Web & News",
+      enabled: Boolean(
+        process.env.GOOGLE_SEARCH_API_KEY &&
+          process.env.GOOGLE_SEARCH_ENGINE_ID,
+      ),
+      search: searchWeb,
+    },
   ];
 
   const selected = providers.filter(
@@ -183,10 +359,11 @@ export async function GET(request: NextRequest) {
       provider.enabled && (source === "all" || source === provider.key),
   );
 
-  if (source === "youtube" && !process.env.YOUTUBE_API_KEY) {
+  const requestedProvider = providers.find((provider) => provider.key === source);
+  if (source !== "all" && requestedProvider && !requestedProvider.enabled) {
     return NextResponse.json({
       items: [],
-      notice: "YouTube chưa được kết nối. Cần thêm YOUTUBE_API_KEY trong Vercel.",
+      notice: `${requestedProvider.label} chưa được kết nối. Quản trị viên cần thêm thông tin API trong Vercel.`,
       activeSources: providers
         .filter((item) => item.enabled)
         .map((item) => item.label),
@@ -213,6 +390,14 @@ export async function GET(request: NextRequest) {
   const youtubeMissing =
     (source === "all" || source === "youtube") &&
     !process.env.YOUTUBE_API_KEY;
+  const optionalMissing = providers
+    .filter(
+      (provider) =>
+        !provider.enabled &&
+        provider.key !== "youtube" &&
+        (source === "all" || source === provider.key),
+    )
+    .map((provider) => provider.label);
 
   return NextResponse.json({
     items: successful.flatMap((result) => result.items),
@@ -220,6 +405,9 @@ export async function GET(request: NextRequest) {
     notice: [
       youtubeMissing
         ? "YouTube cần YOUTUBE_API_KEY; các nguồn công khai khác vẫn đang hoạt động."
+        : "",
+      optionalMissing.length
+        ? `Chưa kết nối: ${optionalMissing.join(", ")}.`
         : "",
       failedCount > 0
         ? `${failedCount} nguồn tạm thời không phản hồi; kết quả từ các nguồn còn lại vẫn được hiển thị.`
