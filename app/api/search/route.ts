@@ -22,7 +22,7 @@ async function searchDailymotion(query: string): Promise<Video[]> {
   endpoint.searchParams.set("sort", "relevance");
 
   const response = await fetch(endpoint, { next: { revalidate: 300 } });
-  if (!response.ok) throw new Error("Dailymotion chÆ°a pháº£n há»“i");
+  if (!response.ok) throw new Error("Dailymotion chưa phản hồi");
   const data = await response.json();
   return (data.list || []).map((item: Record<string, unknown>) => ({
     id: String(item.id),
@@ -46,7 +46,7 @@ async function searchYouTube(query: string): Promise<Video[]> {
   endpoint.searchParams.set("key", key);
 
   const response = await fetch(endpoint, { next: { revalidate: 300 } });
-  if (!response.ok) throw new Error("YouTube chÆ°a pháº£n há»“i");
+  if (!response.ok) throw new Error("YouTube chưa phản hồi");
   const data = await response.json();
   return (data.items || []).map((item: Record<string, any>) => ({
     id: item.id.videoId,
@@ -71,7 +71,7 @@ async function searchPeerTube(query: string): Promise<Video[]> {
     headers: { Accept: "application/json" },
     next: { revalidate: 300 },
   });
-  if (!response.ok) throw new Error("PeerTube chÆ°a pháº£n há»“i");
+  if (!response.ok) throw new Error("PeerTube chưa phản hồi");
   const data = await response.json();
 
   return (data.data || [])
@@ -116,7 +116,7 @@ async function searchInternetArchive(query: string): Promise<Video[]> {
     headers: { Accept: "application/json" },
     next: { revalidate: 300 },
   });
-  if (!response.ok) throw new Error("Internet Archive chÆ°a pháº£n há»“i");
+  if (!response.ok) throw new Error("Internet Archive chưa phản hồi");
   const data = await response.json();
 
   return (data.response?.docs || []).map((item: Record<string, any>) => {
@@ -141,7 +141,7 @@ export async function GET(request: NextRequest) {
   const source = request.nextUrl.searchParams.get("source") || "all";
   if (!query || query.length < 2) {
     return NextResponse.json(
-      { error: "Tá»« khÃ³a cáº§n Ã­t nháº¥t 2 kÃ½ tá»±." },
+      { error: "Từ khóa cần ít nhất 2 ký tự." },
       { status: 400 },
     );
   }
@@ -186,7 +186,7 @@ export async function GET(request: NextRequest) {
   if (source === "youtube" && !process.env.YOUTUBE_API_KEY) {
     return NextResponse.json({
       items: [],
-      notice: "YouTube chÆ°a Ä‘Æ°á»£c káº¿t ná»‘i. Cáº§n thÃªm YOUTUBE_API_KEY trong Vercel.",
+      notice: "YouTube chưa được kết nối. Cần thêm YOUTUBE_API_KEY trong Vercel.",
       activeSources: providers
         .filter((item) => item.enabled)
         .map((item) => item.label),
@@ -219,14 +219,13 @@ export async function GET(request: NextRequest) {
     activeSources: successful.map((result) => result.label),
     notice: [
       youtubeMissing
-        ? "YouTube cáº§n YOUTUBE_API_KEY; cÃ¡c nguá»“n cÃ´ng khai khÃ¡c váº«n Ä‘ang hoáº¡t Ä‘á»™ng."
+        ? "YouTube cần YOUTUBE_API_KEY; các nguồn công khai khác vẫn đang hoạt động."
         : "",
       failedCount > 0
-        ? `${failedCount} nguá»“n táº¡m thá»i khÃ´ng pháº£n há»“i; káº¿t quáº£ tá»« cÃ¡c nguá»“n cÃ²n láº¡i váº«n Ä‘Æ°á»£c hiá»ƒn thá»‹.`
+        ? `${failedCount} nguồn tạm thời không phản hồi; kết quả từ các nguồn còn lại vẫn được hiển thị.`
         : "",
     ]
       .filter(Boolean)
       .join(" "),
   });
 }
-
