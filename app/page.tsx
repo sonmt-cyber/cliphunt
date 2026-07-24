@@ -118,7 +118,7 @@ export default function Home() {
           <span className="brand-mark">▶</span>
           ClipHunt
         </a>
-        <span className="status"><i /> Tìm kiếm đa nguồn</span>
+        <span className="status"><i /> Tìm kiếm đa nguồn · <a href="/settings">Tài khoản & API</a></span>
       </nav>
 
       <section className="hero">
