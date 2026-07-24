@@ -69,6 +69,27 @@ h1 em { color: var(--accent); font-weight: 400; }
 footer { border-top: 1px solid var(--line); padding: 28px max(28px, calc((100% - 1184px)/2)); display: flex; justify-content: space-between; gap: 25px; color: var(--muted); font-size: 11px; }
 footer span { color: var(--ink); font-weight: 700; }
 footer p { margin: 0; text-align: right; }
+.vault { max-width: 920px; margin: 0 auto; padding: 48px 24px 80px; }
+.vault a { color: var(--accent); text-decoration: none; font-weight: 700; }
+.vault h1 { font-family: "Instrument Serif",serif; font-size: clamp(42px,7vw,72px); font-weight: 400; margin: 28px 0 8px; letter-spacing: -2px; }
+.vault h2 { font-family: "Instrument Serif",serif; font-size: 30px; font-weight: 400; margin: 0 0 18px; }
+.vault section { border-top: 1px solid var(--line); margin-top: 32px; padding-top: 28px; }
+.vault form { display: grid; gap: 10px; max-width: 620px; }
+.vault input,.vault textarea,.vault select { border: 1px solid var(--line); background: white; color: var(--ink); padding: 13px 14px; font: inherit; }
+.vault textarea { min-height: 100px; resize: vertical; }
+.vault button { border: 1px solid var(--ink); background: var(--ink); color: white; padding: 12px 16px; cursor: pointer; font-weight: 700; }
+.vault button.secondary { background: transparent; color: var(--ink); }
+.vault-head { display: flex; justify-content: space-between; gap: 24px; align-items: flex-start; }
+.security-note { padding: 16px; border: 1px solid #87b898; background: #ecf7ef; line-height: 1.5; }
+.vault-list { display: grid; gap: 10px; }
+.vault-list article { border: 1px solid var(--line); background: white; padding: 16px; display: grid; gap: 14px; }
+.vault-list article div { display: flex; flex-direction: column; gap: 5px; }
+.vault-list article span { color: var(--muted); font-size: 13px; }
+.vault-list article form { grid-template-columns: 1fr auto; }
+.vault code { overflow-wrap: anywhere; padding: 12px; background: #f2eee5; }
+.profile-chips { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 18px; }
+.profile-chips span { border: 1px solid var(--line); border-radius: 99px; padding: 7px 11px; font-size: 12px; }
+.notice { color: #a13d2d; font-weight: 600; }
 
 .connections { max-width: 880px; margin: 28px auto 0; padding: 16px 18px; border: 1px solid var(--line); background: #fff8; text-align: left; }
 .connections summary { cursor: pointer; color: var(--ink); font-weight: 700; }
