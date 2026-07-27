@@ -6,7 +6,7 @@ import { ensureSchema, sql } from "@/lib/vault-db";
 export async function GET() {
   try {
     await ensureSchema(); await requireAdmin();
-    const profiles = await sql()`select id,username,role,active,created_at from profiles order by created_at`;
+    const profiles = await sql()`select id,username,email,role,active,google_sub is not null as google_linked,created_at from profiles order by created_at`;
     return NextResponse.json({ profiles });
   } catch { return NextResponse.json({ error: "Không có quyền admin." }, { status: 403 }); }
 }
@@ -15,10 +15,11 @@ export async function POST(request: Request) {
   try {
     await ensureSchema(); const admin = await requireAdmin();
     const b = await request.json(); const username=String(b.username||"").trim(); const password=String(b.password||"");
+    const email = String(b.email || "").trim().toLowerCase() || null;
     const role = b.role === "admin" ? "admin" : "member";
     if(username.length<3||password.length<12) return NextResponse.json({error:"Tên đăng nhập tối thiểu 3 ký tự, mật khẩu tối thiểu 12 ký tự."},{status:400});
-    const rows=await sql()<Array<{id:string}>>`insert into profiles(username,username_norm,password_hash,role)
-      values(${username},${username.toLowerCase()},${hashPassword(password)},${role}) returning id`;
+    const rows=await sql()<Array<{id:string}>>`insert into profiles(username,username_norm,password_hash,role,email)
+      values(${username},${username.toLowerCase()},${hashPassword(password)},${role},${email}) returning id`;
     await audit(admin.id,"profile.create","profile",rows[0].id);
     return NextResponse.json({ok:true});
   } catch { return NextResponse.json({error:"Không thể tạo profile; tên có thể đã tồn tại."},{status:400}); }
@@ -31,9 +32,11 @@ export async function PATCH(request: Request) {
     await sql()`update profiles set
       active=coalesce(${typeof b.active==="boolean"?b.active:null},active),
       role=coalesce(${b.role==="admin"||b.role==="member"?b.role:null},role),
+      email=case when ${typeof b.email==="string"} then ${String(b.email||"").trim().toLowerCase()||null} else email end,
       password_hash=coalesce(${b.password?hashPassword(String(b.password)):null},password_hash)
       where id=${String(b.id)}`;
     await audit(admin.id,"profile.update","profile",String(b.id));
     return NextResponse.json({ok:true});
   } catch { return NextResponse.json({error:"Không có quyền hoặc dữ liệu không hợp lệ."},{status:403}); }
 }
+
