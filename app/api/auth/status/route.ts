@@ -14,9 +14,11 @@ export async function GET() {
     return NextResponse.json({
       configured: true,
       initialized: count[0].count > 0,
+      googleConfigured: Boolean(process.env.GOOGLE_OAUTH_CLIENT_ID && process.env.GOOGLE_OAUTH_CLIENT_SECRET),
       profile: await currentProfile(),
     });
   } catch {
     return NextResponse.json({ configured: false, initialized: false, profile: null }, { status: 503 });
   }
 }
+
