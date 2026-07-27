@@ -39,6 +39,10 @@ export async function ensureSchema() {
           created_at timestamptz not null default now()
         )
       `;
+      await db`alter table profiles add column if not exists email text`;
+      await db`alter table profiles add column if not exists google_sub text`;
+      await db`create unique index if not exists profiles_email_unique on profiles (lower(email)) where email is not null`;
+      await db`create unique index if not exists profiles_google_sub_unique on profiles (google_sub) where google_sub is not null`;
       await db`
         create table if not exists sessions (
           token_hash text primary key,
@@ -89,3 +93,4 @@ export async function ensureSchema() {
   }
   return schemaReady;
 }
+
